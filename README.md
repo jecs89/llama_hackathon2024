@@ -19,8 +19,8 @@ Before you begin, ensure you have the following installed:
 
 Clone the project repository to your local machine:
 
-git clone https://github.com/yourusername/your-repository.git
-cd your-repository
+git clone https://github.com/jecs89/llama_hackathon2024
+cd llama_hackathon2024
 
 ### 2. Install the Dependencies
 
@@ -38,4 +38,4 @@ Remember to config you key in secrets
 
 ### 4. Testing the App
 
-Test: Patient: 103, the patient said: I have dizziness, stomach pain.
+Test: "Patient: 103, the patient said: I have dizziness, stomach pain."
