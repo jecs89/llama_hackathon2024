@@ -19,21 +19,23 @@ Before you begin, ensure you have the following installed:
 
 Clone the project repository to your local machine:
 
-```bash
 git clone https://github.com/yourusername/your-repository.git
 cd your-repository
-```bash
 
 ### 2. Install the Dependencies
 
 Once the virtual environment is activated, install the required dependencies using the `requirements.txt` file:
 
-```bash
 pip install -r requirements.txt
 
 ### 3. Run the App
 
 Once you have installed the dependencies, you can start the application using Streamlit. To run the app, use the following command:
 
-```bash
 streamlit run demo_app.py
+
+Remember to config you key in secrets
+
+### 4. Testing the App
+
+Test: Patient: 103, the patient said: I have dizziness, stomach pain.
