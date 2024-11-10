@@ -4,7 +4,6 @@ from groq import Groq
 
 st.set_page_config(page_icon="💬", layout="wide", page_title="Groq Goes Brrrrrrrr...")
 
-
 def icon(emoji: str):
     """Shows an emoji as a Notion-style page icon."""
     st.write(
@@ -12,13 +11,12 @@ def icon(emoji: str):
         unsafe_allow_html=True,
     )
 
+icon("💊")
 
-icon("🏎️")
+st.subheader("LlamaMed Guardian: Medication Safety Assistant", divider="rainbow", anchor=False)
 
-st.subheader("Groq Chat Streamlit App", divider="rainbow", anchor=False)
-
-st.write("## Welcome to the Model Interface!")
-st.write("This app allows you to interact with **Model 1** for generating responses based on your inputs.")
+st.write("## Welcome!")
+st.write("This app allows you search on historical record of patients to support you.")
 
 client = Groq(
     api_key=st.secrets["GROQ_API_KEY"],
@@ -82,7 +80,7 @@ def get_patient_diagnosis(patient_id):
         patient_data = df[df["patient_id"] == patient_id]
         
         if patient_data.empty:
-            return None  # No diagnosis found for the patient ID
+            return None, None, None  # No diagnosis found for the patient ID
 
         # Sort the patient data by diagnosis_date and pick the latest
         patient_data["date"] = pd.to_datetime(patient_data["date"], errors='coerce')
@@ -122,78 +120,92 @@ if prompt := st.chat_input("Enter your prompt here..."):
     # Display the user's message
     with st.chat_message("user", avatar="👨‍💻"):
         st.markdown(prompt)
-    
-    patient_id = prompt.split("Patient:")[1].split(",")[0].strip()  # Extract patient ID
-    question = prompt.split("have")[1].strip().split(',')  # Extract the question
-    symptoms = ', '.join(question)
-    # print( f'My input: {patient_id} {question} {len(question)}' )
 
-    medicine_leaflet, side_effects_data, patient_summary = get_patient_diagnosis(patient_id)
-    # print(f"""Context: {medicine_leaflet}, side: {side_efects_data} \nThe patient said, I have {', '.join(question)} """)
+    # Check if the input matches the expected pattern
+    if "Patient:" not in prompt or "the patient said:" not in prompt:
+        # If the input doesn't match the expected pattern, show an error message
+        st.chat_message("assistant", avatar="🤖").markdown("Please follow the pattern: `Patient: <patient_id>, the patient said: I have <symptoms>`.")
+    else:
+        try:
+            # Extract patient_id and symptoms from the input
+            patient_id = prompt.split("Patient:")[1].split(",")[0].strip()  # Extract patient ID
+            question = prompt.split("the patient said:")[1].strip()  # Extract the question
+            symptoms = question.split(",")  # Extract symptoms
 
-    context = """Instructions for the Model:
+            # Retrieve patient diagnosis and other info
+            medicine_leaflet, side_effects_data, patient_summary = get_patient_diagnosis(patient_id)
 
-                You are given a block of text containing both drug information (medicine leaflet) and a patient’s reported symptoms, along with additional details about the patient’s history. Based on this information, your task is to analyze the symptoms described and determine whether they are typical side effects of the medication or if they suggest something unusual that may require immediate medical attention.
+            # If patient data is not found, show the "user does not exist" message
+            if medicine_leaflet is None:
+                st.chat_message("assistant", avatar="🤖").markdown("User does not exist.")
+            else:
+                # Fill the context template if patient is found
+                context = """Instructions for the Model:
 
-                Big Text Block:
-                {medicine_leaflet}
+                            You are given a block of text containing both drug information (medicine leaflet) and a patient’s reported symptoms, along with additional details about the patient’s history. Based on this information, your task is to analyze the symptoms described and determine whether they are typical side effects of the medication or if they suggest something unusual that may require immediate medical attention.
 
-                Side effects:
-                {side_effects_data}
+                            Big Text Block:
+                            {medicine_leaflet}
 
-                Patient Query:
+                            Side effects:
+                            {side_effects_data}
 
-                The patient said, "I have {symptoms} Should I be worried?"
+                            Patient Query:
 
-                Additional Patient Summary:
-                {patient_summary}
+                            The patient said, "I have {symptoms} Should I be worried?"
 
-                Model's Task:
+                            Additional Patient Summary:
+                            {patient_summary}
 
-                Analyze the Symptoms: Check if {symptoms} are listed as common side effects in the leaflet.
-                Consider Patient’s History: Take into account the patient's existing conditions (e.g., hepatic steatosis) and medication regimen.
-                
-                Provide a Short Answer:
-                - If common: State that these symptoms are **NORMAL** side effects of {medicine_leaflet}, but suggest monitoring and consulting a doctor if symptoms persist.
-                - If uncommon: State that these symptoms are not common, advise **STOPPING** the medication, and suggest seeking medical help immediately.
-                """
+                            Model's Task:
 
-    context_filled = context.format(medicine_leaflet=medicine_leaflet, 
-                                side_effects_data=side_effects_data, 
-                                symptoms=symptoms, patient_summary=patient_summary)
-    print( f"""Context: {context_filled}""" )
+                            Analyze the Symptoms: Check if {symptoms} are listed as common side effects in the leaflet.
+                            Consider Patient’s History: Take into account the patient's existing conditions (e.g., hepatic steatosis) and medication regimen.
 
-    # Fetch response from Groq API
-    try:
-        chat_completion = client.chat.completions.create(
-            model=selected_model,  # Use the fixed selected model here
-            messages=[{
-                "role": "user",  # Still specifying role as "user" for the new message
-                "content": context_filled  # Pass the context string as content
-            }],
-            max_tokens=max_tokens,  # Use the pre-set max_tokens value
-            stream=True,
-        )
+                            Provide a Short Answer:
+                            - If common: State that these symptoms are **NORMAL** side effects of {medicine_leaflet}, but suggest monitoring and consulting a doctor if symptoms persist.
+                            - If uncommon: State that these symptoms are not common, advise **STOPPING** the medication, and suggest seeking medical help immediately.
+                            """
 
-        # Use the generator function with st.write_stream to display the response in real-time
-        with st.chat_message("assistant", avatar="🤖"):
-            chat_responses_generator = generate_chat_responses(chat_completion)
-            full_response = st.write_stream(chat_responses_generator)
+                context_filled = context.format(medicine_leaflet=medicine_leaflet, 
+                                                side_effects_data=side_effects_data, 
+                                                symptoms=", ".join(symptoms), patient_summary=patient_summary)
+                print(f"""Context: {context_filled}""")
 
-        # Append the assistant's full response to session_state.messages
-        if isinstance(full_response, str):
-            st.session_state.messages.append(
-                {"role": "assistant", "content": full_response}
-            )
-        else:
-            # Handle the case where full_response is not a string
-            combined_response = "\n".join(str(item) for item in full_response)
-            st.session_state.messages.append(
-                {"role": "assistant", "content": combined_response}
-            )
+                try:
+                    chat_completion = client.chat.completions.create(
+                        model=selected_model,  # Use the fixed selected model here
+                        messages=[{
+                            "role": "user",  # Still specifying role as "user" for the new message
+                            "content": context_filled  # Pass the context string as content
+                        }],
+                        max_tokens=max_tokens,  # Use the pre-set max_tokens value
+                        stream=True,
+                    )
 
-    except Exception as e:
-        st.error(e, icon="🚨")
+                    # Use the generator function with st.write_stream to display the response in real-time
+                    with st.chat_message("assistant", avatar="🤖"):
+                        chat_responses_generator = generate_chat_responses(chat_completion)
+                        full_response = st.write_stream(chat_responses_generator)
+
+                    # Append the assistant's full response to session_state.messages
+                    if isinstance(full_response, str):
+                        st.session_state.messages.append(
+                            {"role": "assistant", "content": full_response}
+                        )
+                    else:
+                        # Handle the case where full_response is not a string
+                        combined_response = "\n".join(str(item) for item in full_response)
+                        st.session_state.messages.append(
+                            {"role": "assistant", "content": combined_response}
+                        )
+
+                except Exception as e:
+                    st.error(e, icon="🚨")
+
+        except Exception as e:
+            st.error(f"An error occurred: {e}", icon="🚨")
+
 
 # Debugging output (you can remove this in production)
 print(f'Full messages: {st.session_state.messages}')
