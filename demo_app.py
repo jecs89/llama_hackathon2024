@@ -71,6 +71,7 @@ import pandas as pd
 
 CSV_FILE_PATH1 = 'patient_data_with_multiple_diagnoses.csv'
 CSV_FILE_PATH2 = 'medicine_side_effects_single_row.csv'
+CSV_FILE_PATH3 = 'summary_patients.csv'
 
 def get_patient_diagnosis(patient_id):
     try:
@@ -94,9 +95,13 @@ def get_patient_diagnosis(patient_id):
         df = pd.read_csv(CSV_FILE_PATH2)
         side_efects_data = (df[df["medicine_leaflet"] == medicine_leaflet])["side_effects"].loc[0]
 
+        df = pd.read_csv(CSV_FILE_PATH3)
+        patients_summary = df[df["patient_id"] == patient_id]
+        patient_summary = patients_summary['summary'].loc[0]
+        
         # text_joint = medicine_leaflet + ': ' +side_efects_data
 
-        return medicine_leaflet, side_efects_data
+        return medicine_leaflet, side_efects_data, patient_summary
     
     except Exception as e:
         st.error(f"Error fetching diagnosis: {str(e)}")
@@ -123,12 +128,12 @@ if prompt := st.chat_input("Enter your prompt here..."):
     symptoms = ', '.join(question)
     # print( f'My input: {patient_id} {question} {len(question)}' )
 
-    medicine_leaflet, side_effects_data = get_patient_diagnosis(patient_id)
+    medicine_leaflet, side_effects_data, patient_summary = get_patient_diagnosis(patient_id)
     # print(f"""Context: {medicine_leaflet}, side: {side_efects_data} \nThe patient said, I have {', '.join(question)} """)
 
     context = """Instructions for the Model:
 
-                I am giving you a large block of text that contains both drug information (medicine leaflet) and a patient's symptoms. Based on this information, analyze whether the symptoms described are typical side effects of the drug or if they indicate something unusual that may require medical attention.
+                You are given a block of text containing both drug information (medicine leaflet) and a patient’s reported symptoms, along with additional details about the patient’s history. Based on this information, your task is to analyze the symptoms described and determine whether they are typical side effects of the medication or if they suggest something unusual that may require immediate medical attention.
 
                 Big Text Block:
                 {medicine_leaflet}
@@ -140,9 +145,14 @@ if prompt := st.chat_input("Enter your prompt here..."):
 
                 The patient said, "I have {symptoms} Should I be worried?"
 
+                Additional Patient Summary:
+                {patient_summary}
+
                 Model's Task:
 
                 Analyze the Symptoms: Check if {symptoms} are listed as common side effects in the leaflet.
+                Consider Patient’s History: Take into account the patient's existing conditions (e.g., hepatic steatosis) and medication regimen.
+                
                 Provide a Short Answer:
                 - If common: State that these symptoms are **NORMAL** side effects of {medicine_leaflet}, but suggest monitoring and consulting a doctor if symptoms persist.
                 - If uncommon: State that these symptoms are not common, advise **STOPPING** the medication, and suggest seeking medical help immediately.
@@ -150,7 +160,7 @@ if prompt := st.chat_input("Enter your prompt here..."):
 
     context_filled = context.format(medicine_leaflet=medicine_leaflet, 
                                 side_effects_data=side_effects_data, 
-                                symptoms=symptoms)
+                                symptoms=symptoms, patient_summary=patient_summary)
     print( f"""Context: {context_filled}""" )
 
     # Fetch response from Groq API
