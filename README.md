@@ -1,5 +1,3 @@
-llama_hackathon2024
-
 # LlamaMed Guardian
 
 ## Description
@@ -19,20 +17,23 @@ Before you begin, ensure you have the following installed:
 
 Clone the project repository to your local machine:
 
+```bash
 git clone https://github.com/jecs89/llama_hackathon2024
 cd llama_hackathon2024
+```
+
 
 ### 2. Install the Dependencies
 
 Once the virtual environment is activated, install the required dependencies using the `requirements.txt` file:
 
-pip install -r requirements.txt
+`pip install -r requirements.txt`
 
 ### 3. Run the App
 
 Once you have installed the dependencies, you can start the application using Streamlit. To run the app, use the following command:
 
-streamlit run demo_app.py
+`streamlit run demo_app.py`
 
 Remember to config you key in secrets
 
