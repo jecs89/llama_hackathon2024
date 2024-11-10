@@ -22,6 +22,7 @@ Clone the project repository to your local machine:
 ```bash
 git clone https://github.com/yourusername/your-repository.git
 cd your-repository
+```bash
 
 ### 2. Install the Dependencies
 
