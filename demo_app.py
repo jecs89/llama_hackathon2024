@@ -67,39 +67,43 @@ for message in st.session_state.messages:
 
 import pandas as pd
 
-CSV_FILE_PATH1 = 'patient_data_with_multiple_diagnoses.csv'
-CSV_FILE_PATH2 = 'medicine_side_effects_single_row.csv'
+CSV_FILE_PATH1 = 'EVOLUCAO.csv'
+CSV_FILE_PATH2 = 'leaflet_side_effects.csv'
 CSV_FILE_PATH3 = 'summary_patients.csv'
 
 def get_patient_diagnosis(patient_id):
     try:
         # Load the CSV containing patient data (make sure the CSV is structured properly)
-        df = pd.read_csv(CSV_FILE_PATH1)
+        df = pd.read_csv(CSV_FILE_PATH1, sep='~')
+        print(df.head())
+        print(patient_id, df.dtypes)
         
         # Filter by patient ID
-        patient_data = df[df["patient_id"] == patient_id]
+        patient_data = df[df["Admission_ID"].astype(str) == str(patient_id)]
+        # print( patient_data.shape[0] )
         
         if patient_data.empty:
             return None, None, None  # No diagnosis found for the patient ID
 
         # Sort the patient data by diagnosis_date and pick the latest
-        patient_data["date"] = pd.to_datetime(patient_data["date"], errors='coerce')
-        latest_diagnosis = patient_data.sort_values("date", ascending=False).loc[0]
+        patient_data["date"] = pd.to_datetime(patient_data["Note_Date"], errors='coerce')
+        # latest_diagnosis = patient_data.sort_values("date", ascending=False).loc[0]
         
         # Format the diagnosis to return the necessary context
         # diagnosis_context = f"Diagnosis for patient {patient_id} (latest): {latest_diagnosis['diagnosis']} on {latest_diagnosis['date'].strftime('%Y-%m-%d')}."
-        medicine_leaflet = latest_diagnosis['medicine_leaflet']
+        # medicine_leaflet = latest_diagnosis['medicine_leaflet']
 
-        df = pd.read_csv(CSV_FILE_PATH2)
-        side_efects_data = (df[df["medicine_leaflet"] == medicine_leaflet])["side_effects"].loc[0]
+        df = pd.read_csv(CSV_FILE_PATH2, sep='~')
+        side_efects_data = df["summary_en"].loc[0]
+        print(side_efects_data)
 
         df = pd.read_csv(CSV_FILE_PATH3)
-        patients_summary = df[df["patient_id"] == patient_id]
+        patients_summary = df[df["patient_id"].astype(str) == str(patient_id)]
         patient_summary = patients_summary['summary'].loc[0]
         
         # text_joint = medicine_leaflet + ': ' +side_efects_data
 
-        return medicine_leaflet, side_efects_data, patient_summary
+        return '', side_efects_data, patient_summary
     
     except Exception as e:
         st.error(f"Error fetching diagnosis: {str(e)}")
@@ -131,6 +135,7 @@ if prompt := st.chat_input("Enter your prompt here..."):
             patient_id = prompt.split("Patient:")[1].split(",")[0].strip()  # Extract patient ID
             question = prompt.split("the patient said:")[1].strip()  # Extract the question
             symptoms = question.split(",")  # Extract symptoms
+            print( f"Patient {patient_id}" )
 
             # Retrieve patient diagnosis and other info
             medicine_leaflet, side_effects_data, patient_summary = get_patient_diagnosis(patient_id)
